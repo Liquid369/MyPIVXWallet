@@ -1,5 +1,5 @@
 import { cAnalyticsLevel, cStatKeys, cExplorer, STATS } from './settings.js';
-import { doms, mempool, updateStakingRewardsGUI } from './global.js';
+import { doms, mempool, updateStakingRewardsGUI, updateMasternodeRewardsGUI } from './global.js';
 import { masterKey, getDerivationPath, getNewAddress } from './wallet.js';
 import { cChainParams, donationAddress, COIN } from './chain_params.js';
 import { createAlert } from './misc.js';
@@ -7,6 +7,7 @@ import { Mempool } from './mempool.js';
 export let networkEnabled = true;
 export let cachedBlockCount = 0;
 export let arrRewards = [];
+export let masternodeRewards = [];
 
 // Disable the network, return true if successful.
 export function disableNetwork() {
@@ -60,6 +61,7 @@ export function getBlockCount() {
             );
             getUTXOs();
             getStakingRewards();
+            getMasternodeRewards();
         }
         cachedBlockCount = data.backend.blocks;
     };
@@ -297,6 +299,91 @@ export async function getStakingRewards() {
     } else {
         // No balance history!
         doms.domGuiStakingLoadMore.style.display = 'none';
+
+        // Update GUI
+        stopAnim();
+    }
+}
+
+export async function getMasternodeRewards() {
+    if (!networkEnabled || masterKey == undefined) return;
+    doms.domGuiMasternodeLoadMoreIcon.style.opacity = 0.5;
+    const stopAnim = () => (doms.domGuiMasternodeLoadMoreIcon.style.opacity = 1);
+    const nHeight = masternodeRewards.length
+        ? masternodeRewards[masternodeRewards.length - 1].blockHeight
+        : 0;
+    let mapPaths = new Map();
+    const txSum = (v) =>
+        v.reduce(
+            (t, s) =>
+                t +
+                (s.addresses
+                    .map((strAddr) => mapPaths.get(strAddr))
+                    .filter((v) => v).length && s.addresses.length === 2
+                    ? parseInt(s.value)
+                    : 0),
+            0
+        );
+    let cData;
+    if (masterKey.isHD) {
+        const derivationPath = getDerivationPath(masterKey.isHardwareWallet)
+            .split('/')
+            .slice(0, 4)
+            .join('/');
+        const xpub = await masterKey.getxpub(derivationPath);
+        cData = await (
+            await fetch(
+                `${
+                    cExplorer.url
+                }/api/v2/xpub/${xpub}?details=txs&pageSize=500&to=${
+                    nHeight ? nHeight - 1 : 0
+                }`
+            )
+        ).json();
+        // Map all address <--> derivation paths
+        if (cData.tokens)
+            cData.tokens.forEach((cAddrPath) =>
+                mapPaths.set(cAddrPath.name, cAddrPath.path)
+            );
+    } else {
+        const address = await masterKey.getAddress();
+        cData = await (
+            await fetch(
+                `${
+                    cExplorer.url
+                }/api/v2/address/${address}?details=txs&pageSize=500&to=${
+                    nHeight ? nHeight - 1 : 0
+                }`
+            )
+        ).json();
+        mapPaths.set(address, ':)');
+    }
+    if (cData && cData.transactions) {
+        // Update rewards
+        masternodeRewards = masternodeRewards.concat(
+            cData.transactions
+                .filter((tx) => tx.vout[0].addresses[0] === 'CoinStake TX')
+                .map((tx) => {
+                    return {
+                        id: tx.txid,
+                        time: tx.blockTime,
+                        blockHeight: tx.blockHeight,
+                        amount: txSum(tx.vout.slice(-1)) / COIN,
+                    };
+                })
+                .filter((tx) => tx.amount != 0)
+        );
+
+        // If the results don't match the full 'max/requested results', then we know there's nothing more to load, hide the button!
+        if (cData.transactions.length !== cData.itemsOnPage)
+            doms.domGuiMasternodeLoadMore.style.display = 'none';
+
+        // Update GUI
+        stopAnim();
+        updateMasternodeRewardsGUI(true);
+    } else {
+        // No balance history!
+        doms.domGuiMasternodeLoadMore.style.display = 'none';
 
         // Update GUI
         stopAnim();

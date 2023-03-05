@@ -94,6 +94,10 @@ button:active {
     margin-top: 4px;
 }
 
+.fa-large-margin {
+    margin-top: 10px;
+}
+
 .ptr {
     cursor: pointer;
 }
@@ -1055,6 +1059,12 @@ a {
     max-height: 75px;
     padding: 0;
     fill: #9621ff;
+}
+
+.masternode-rewards-list {
+    overflow: auto;
+    font-size: large;
+    height: 85%;
 }
 
 .dashboard-title {

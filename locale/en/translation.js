@@ -111,6 +111,9 @@ export const en_translation = {
     stakeUnstake:"Unstake",                //
     stakeLoadMore:"Load more",               //
 
+    // Masternode
+    masternodeLoadMore:"Load more",               //
+
     // Settings
     settingsExplorer:"Choose an explorer",            //
     settingsLanguage:"Choose an Language:",            //

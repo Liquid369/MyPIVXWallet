@@ -14,7 +14,9 @@ import {
     networkEnabled,
     getBlockCount,
     arrRewards,
+    masternodeRewards,
     getStakingRewards,
+    getMasternodeRewards,
 } from './network.js';
 import { start as settingsStart, cExplorer, debug } from './settings.js';
 import { createAlert, confirmPopup, sanitizeHTML, MAP_B58 } from './misc.js';
@@ -90,6 +92,11 @@ export function start() {
         domMnNetType: document.getElementById('mnNetType'),
         domMnNetIP: document.getElementById('mnNetIP'),
         domMnLastSeen: document.getElementById('mnLastSeen'),
+        domMnLastPaid: document.getElementById('mnLastPaid'),
+        domGuiMasternodeLoadMore: document.getElementById('masternodeLoadMore'),
+        domGuiMasternodeLoadMoreIcon: document.getElementById(
+            'masternodeLoadMoreIcon'
+        ),
 
         domAccessWallet: document.getElementById('accessWallet'),
         domImportWallet: document.getElementById('importWallet'),
@@ -119,6 +126,12 @@ export function start() {
         ),
         domStakingRewardsTitle: document.getElementById(
             'staking-rewards-title'
+        ),
+        domMasternodeRewardsList: document.getElementById(
+            'masternode-rewards-content'
+        ),
+        domMasternodeRewardsTitle: document.getElementById(
+            'masternode-rewards-title'
         ),
         domMnemonicModalContent: document.getElementById(
             'ModalMnemonicContent'
@@ -324,6 +337,35 @@ export function updateStakingRewardsGUI(fCallback = false) {
     // UpdateDOMS.DOM
     doms.domStakingRewardsTitle.innerHTML = `Staking Rewards: ≥${nRewards} ${cChainParams.current.TICKER}`;
     doms.domStakingRewardsList.innerHTML = strList;
+}
+
+export function updateMasternodeRewardsGUI(fCallback = false) {
+    if (!masternodeRewards.length) {
+        // This ensures we don't spam network requests, since if a network callback says we have no stakes; no point checking again!
+        if (!fCallback) getMasternodeRewards();
+        return;
+    }
+    //DOMS.DOM-optimised list generation
+    const strList = masternodeRewards
+        .map(
+            (cReward) =>
+                `<i style="opacity: 0.75; cursor: pointer" onclick="window.open('${
+                    cExplorer.url + '/tx/' + cReward.id
+                }', '_blank')">${new Date(
+                    cReward.time * 1000
+                ).toLocaleDateString()}</i> <b>+${cReward.amount} ${
+                    cChainParams.current.TICKER
+                }</b>`
+        )
+        .join('<br>');
+    // Calculate total
+    const nRewards = masternodeRewards.reduce(
+        (total, reward) => total + reward.amount,
+        0
+    );
+    // UpdateDOMS.DOM
+    doms.domMasternodeRewardsTitle.innerHTML = `Masternode Rewards: ≥${nRewards} ${cChainParams.current.TICKER}`;
+    doms.domMasternodeRewardsList.innerHTML = strList;
 }
 
 async function loadImages() {
@@ -1080,6 +1122,7 @@ export async function updateMasternodeTab() {
 
 async function refreshMasternodeData(cMasternode, fAlert = false) {
     const cMasternodeData = await cMasternode.getFullData();
+    const cMasternodeReward = await cMasternode.getNextMasternodePaymentInMinutes();
     if (debug) console.log(cMasternodeData);
 
     // If we have MN data available, update the dashboard
@@ -1097,6 +1140,12 @@ async function refreshMasternodeData(cMasternode, fAlert = false) {
             cMasternodeData.lastseen * 1000
         ).toLocaleTimeString();
     }
+
+    if (cMasternodeReward != 0 && cMasternodeReward > 30) {
+        doms.domMnLastPaid.innerText = "~" + cMasternodeReward + " blocks";
+      } else {
+        doms.domMnLastPaid.innerText = "Coming soon";
+      }
 
     if (cMasternodeData.status === 'MISSING') {
         doms.domMnTextErrors.innerHTML =

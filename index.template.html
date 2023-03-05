@@ -649,6 +649,29 @@
                   
                 </h2>
               </div>
+              <div class="stake-box large-box col-md-4">
+                <h4 class="stake-balances" style="background-color: #2c0044;border-radius: 10px;">
+                  Last Paid
+                </h4>
+                <h2 id="mnLastPaid" class="stake-balances" style="overflow-wrap: anywhere;top: 50%;left: 50%;transform: translate(-50%, -50%);position: absolute;width: 100%;padding: 10px;font-size: xx-large;" id="mnStatus">
+
+                </h2>
+              </div>
+              <div class="stake-box large-box col-md-4">
+                <div id="masternode-rewards-title" class="staking-rewards-header">
+                  <h4 class="stake-balances" style="background-color: #2c0044;border-radius: 10px;">
+                    Masternode Rewards
+                  </h4>
+                </div>
+                <div class="masternode-rewards-list">
+                  <div id="masternode-rewards-content">
+                  </div>
+                  <button type="button" class="" onclick="MPW.getMasternodeRewards()">
+                    <span class="buttoni-icon" id="masternodeLoadMoreIcon"><i class="fas fa-sync fa-large-margin"></i></span>
+                    <span class="buttoni-text" data-i18n="masternodeLoadMore">Load more</span>
+                  </button>
+                </div>
+              </div>
             </div>
 
             <br>

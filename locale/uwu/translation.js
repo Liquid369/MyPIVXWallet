@@ -111,6 +111,9 @@ export const uwu_translation = {
     stakeUnstake:"",                //Unstake
     stakeLoadMore:"Lowoad Mowore",               //Load more
 
+    // Masternode
+    masternodeLoadMore:"Lowoad Mowore",               //Load more
+
     // Settings
     settingsExplorer:"Chowose an expwower",            //Choose an explorer
     settingsLanguage:"Chowose a Languwuage!",            //Choose an Language:
