@@ -1,9 +1,10 @@
 import { cAnalyticsLevel, cStatKeys, cExplorer, STATS } from './settings.js';
 import { doms, mempool, updateStakingRewardsGUI, updateMasternodeRewardsGUI } from './global.js';
 import { masterKey, getDerivationPath, getNewAddress } from './wallet.js';
-import { cChainParams, donationAddress, COIN } from './chain_params.js';
+import { cChainParams, COIN } from './chain_params.js';
 import { createAlert } from './misc.js';
 import { Mempool } from './mempool.js';
+import { Masternode, getFullData } from './masternode.js';
 export let networkEnabled = true;
 export let cachedBlockCount = 0;
 export let arrRewards = [];
@@ -170,23 +171,12 @@ export async function sendTransaction(hex, msg = '') {
         ).json();
         if (data.result && data.result.length === 64) {
             console.log('Transaction sent! ' + data.result);
-            if (doms.domAddress1s.value !== donationAddress)
-                doms.domTxOutput.innerHTML =
-                    '<h4 style="color:green; font-family:mono !important;">' +
-                    data.result +
-                    '</h4>';
-            else
-                doms.domTxOutput.innerHTML =
-                    '<h4 style="color:green">Thank you for supporting MyPIVXWallet! 💜💜💜<br><span style="font-family:mono !important">' +
-                    data.result +
-                    '</span></h4>';
-            doms.domSimpleTXs.style.display = 'none';
             doms.domAddress1s.value = '';
-            doms.domValue1s.innerHTML = '';
+            doms.domSendAmountCoins.innerHTML = '';
             createAlert(
                 'success',
                 msg || 'Transaction sent!',
-                msg ? 1250 + msg.length * 50 : 1500
+                msg ? 1250 + msg.length * 50 : 3000
             );
             // If allowed by settings: submit a simple 'tx' ping to Labs Analytics
             submitAnalytics('transaction');
@@ -203,10 +193,6 @@ export async function sendTransaction(hex, msg = '') {
                 console.log('no parse!');
                 console.log(e);
             }
-            doms.domTxOutput.innerHTML =
-                '<h4 style="color:red;font-family:mono !important;"><pre style="color: inherit;">' +
-                strError +
-                '</pre></h4>';
             return false;
         }
     } catch (e) {
@@ -306,7 +292,11 @@ export async function getStakingRewards() {
 }
 
 export async function getMasternodeRewards() {
-    if (!networkEnabled || masterKey == undefined) return;
+    const cMasternode = new Masternode(
+        JSON.parse(localStorage.getItem('masternode'))
+    );
+    const cMasternodeData = await cMasternode.getFullData();
+    if (!networkEnabled || cMasternodeData == undefined) return;
     doms.domGuiMasternodeLoadMoreIcon.style.opacity = 0.5;
     const stopAnim = () => (doms.domGuiMasternodeLoadMoreIcon.style.opacity = 1);
     const nHeight = masternodeRewards.length
@@ -324,40 +314,16 @@ export async function getMasternodeRewards() {
                     : 0),
             0
         );
-    let cData;
-    if (masterKey.isHD) {
-        const derivationPath = getDerivationPath(masterKey.isHardwareWallet)
-            .split('/')
-            .slice(0, 4)
-            .join('/');
-        const xpub = await masterKey.getxpub(derivationPath);
-        cData = await (
-            await fetch(
-                `${
-                    cExplorer.url
-                }/api/v2/xpub/${xpub}?details=txs&pageSize=500&to=${
-                    nHeight ? nHeight - 1 : 0
-                }`
-            )
-        ).json();
-        // Map all address <--> derivation paths
-        if (cData.tokens)
-            cData.tokens.forEach((cAddrPath) =>
-                mapPaths.set(cAddrPath.name, cAddrPath.path)
-            );
-    } else {
-        const address = await masterKey.getAddress();
-        cData = await (
-            await fetch(
-                `${
-                    cExplorer.url
-                }/api/v2/address/${address}?details=txs&pageSize=500&to=${
-                    nHeight ? nHeight - 1 : 0
-                }`
-            )
-        ).json();
-        mapPaths.set(address, ':)');
-    }
+    let cData = await (
+        await fetch(
+            `${
+                cExplorer.url
+            }/api/v2/address/${cMasternodeData.addr}?details=txs&pageSize=500&to=${
+                nHeight ? nHeight - 1 : 0
+            }`
+        )
+    ).json();
+    mapPaths.set(cMasternodeData.addr, ':)');
     if (cData && cData.transactions) {
         // Update rewards
         masternodeRewards = masternodeRewards.concat(
