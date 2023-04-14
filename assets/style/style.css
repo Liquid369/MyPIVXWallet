@@ -1,5 +1,3 @@
-@import url('https://fonts.bunny.net/css?family=Chivo');
-
 html {
     font-family: Chivo, sans-serif;
 }
@@ -617,6 +615,11 @@ button {
 
 }
 .staking-rewards-list {
+    overflow: auto;
+    font-size: large;
+    height: 85%;
+}
+.masternode-rewards-list {
     overflow: auto;
     font-size: large;
     height: 85%;
