@@ -11,6 +11,7 @@ import {
     getNewAddress,
     getDerivationPath,
     isYourAddress,
+    LegacyMasterKey,
 } from './wallet.js';
 import { getNetwork, HistoricalTxType } from './network.js';
 import {
@@ -20,7 +21,7 @@ import {
     cMarket,
     strCurrency,
 } from './settings.js';
-import { createAndSendTransaction } from './transactions.js';
+import { createAndSendTransaction, signTransaction } from './transactions.js';
 import {
     createAlert,
     confirmPopup,
@@ -39,6 +40,7 @@ import { Address6 } from 'ip-address';
 import { getEventEmitter } from './event_bus.js';
 import { scanQRCode } from './scanner.js';
 import { Database } from './database.js';
+import bitjs from './bitTrx.js';
 import { checkForUpgrades } from './changelog.js';
 
 /** A flag showing if base MPW is fully loaded or not */
@@ -198,6 +200,36 @@ export async function start() {
         domWipeWallet: document.getElementById('guiWipeWallet'),
         domRestoreWallet: document.getElementById('guiRestoreWallet'),
         domNewAddress: document.getElementById('guiNewAddress'),
+        domRedeemTitle: document.getElementById('redeemCodeModalTitle'),
+        domRedeemCodeUse: document.getElementById('redeemCodeUse'),
+        domRedeemCodeCreate: document.getElementById('redeemCodeCreate'),
+        domRedeemCodeGiftIconBox: document.getElementById(
+            'redeemCodeGiftIconBox'
+        ),
+        domRedeemCodeGiftIcon: document.getElementById('redeemCodeGiftIcon'),
+        domRedeemCodeETA: document.getElementById('redeemCodeETA'),
+        domRedeemCodeProgress: document.getElementById('redeemCodeProgress'),
+        domRedeemCodeInputBox: document.getElementById('redeemCodeInputBox'),
+        domRedeemCodeInput: document.getElementById('redeemCodeInput'),
+        domRedeemCodeConfirmBtn: document.getElementById(
+            'redeemCodeModalConfirmButton'
+        ),
+        domRedeemCodeModeRedeemBtn: document.getElementById(
+            'redeemCodeModeRedeem'
+        ),
+        domRedeemCodeModeCreateBtn: document.getElementById(
+            'redeemCodeModeCreate'
+        ),
+        domRedeemCodeCreateInput: document.getElementById(
+            'redeemCodeCreateInput'
+        ),
+        domRedeemCodeCreateAmountInput: document.getElementById(
+            'redeemCodeCreateAmountInput'
+        ),
+        domRedeemCodeCreatePendingList: document.getElementById(
+            'redeemCodeCreatePendingList'
+        ),
+        domPromoTable: document.getElementById('promo-table'),
         domActivityList: document.getElementById('activity-list-content'),
         domActivityLoadMore: document.getElementById('activityLoadMore'),
         domActivityLoadMoreIcon: document.getElementById(
@@ -246,8 +278,6 @@ export async function start() {
     });
 
     // Register Input Pair events
-
-    /** Dashboard (Send) */
     doms.domSendAmountCoins.oninput = () => {
         updateAmountInputPair(
             doms.domSendAmountCoins,
@@ -1547,6 +1577,42 @@ export async function generateVanityWallet() {
                 'Stop (Searched ' + attempts.toLocaleString('en-GB') + ' keys)';
         }, 200);
     }
+}
+
+/**
+ * Sweep an address to our own wallet, spending all it's UTXOs without change
+ * @param {Array<object>} arrUTXOs - The UTXOs belonging to the address to sweep
+ * @param {LegacyMasterKey} sweepingMasterKey - The address to sweep from
+ * @param {number} nFixedFee - An optional fixed satoshi fee
+ * @returns {Promise<string|false>} - TXID on success, false or error on failure
+ */
+export async function sweepAddress(arrUTXOs, sweepingMasterKey, nFixedFee = 0) {
+    const cTx = new bitjs.transaction();
+
+    // Load all UTXOs as inputs
+    let nTotal = 0;
+    for (const cUTXO of arrUTXOs) {
+        nTotal += cUTXO.sats;
+        cTx.addinput({
+            txid: cUTXO.id,
+            index: cUTXO.vout,
+            script: cUTXO.script,
+            path: cUTXO.path,
+        });
+    }
+
+    // Use a given fixed fee, or use the network fee if unspecified
+    const nFee = nFixedFee || getNetwork().getFee(cTx.serialize().length);
+
+    // Use a new address from our wallet to sweep the UTXOs in to
+    const strAddress = (await getNewAddress(true, false))[0];
+
+    // Sweep the full funds amount, minus the fee, leaving no change from any sweeped UTXOs
+    cTx.addoutput(strAddress, (nTotal - nFee) / COIN);
+
+    // Sign using the given Master Key, then broadcast the sweep, returning the TXID (or a failure)
+    const sign = await signTransaction(cTx, sweepingMasterKey);
+    return await getNetwork().sendTransaction(sign);
 }
 
 export function toggleDropDown(id) {

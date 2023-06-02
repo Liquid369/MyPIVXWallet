@@ -166,7 +166,7 @@
         <br />
         <!-- // CONFIRM MODAL -->
         <div class="modal" id="confirmModal" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static" data-keyboard="false">
-          <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 600px;">
+          <div class="modal-dialog modal-dialog-centered max-w-600" role="document">
             <div class="modal-content">
               <div class="modal-header" id="confirmModalHeader">
                 <h3 class="modal-title" id="confirmModalTitle" style="text-align: center; width: 100%; color: #8e21ff;"></h3>
@@ -426,6 +426,90 @@
                   </div>
                   <!-- // Lock Wallet -->
 
+                  <!-- Redeem Code (PIVX Promos) -->
+                  <div class="modal" id="redeemCodeModal" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+                    <div class="modal-dialog modal-dialog-centered max-w-600" role="document">
+                      <div class="modal-content">
+                        <div class="modal-header" id="redeemCodeModalHeader">
+                          <h3 class="modal-title" id="redeemCodeModalTitle" style="text-align: center; width: 100%; color: #8e21ff;">Redeem Code</h3>
+                        </div>
+                        <div class="modal-body center-text">
+                          <center>
+                            <p class="mono" style="font-size: small;">
+                              <b>PIVX Promos</b> is a decentralised system for gift codes worth PIV
+                            </p>
+                            <div id="redeemCodeModeBox">
+                              <button type="button" onclick="MPW.setPromoMode(true)" id="redeemCodeModeRedeem" class="pivx-button-big" style="margin: 0;border-top-right-radius: 0;border-bottom-right-radius: 0;opacity: 0.5;">Redeem</button>
+                              <button type="button" onclick="MPW.setPromoMode(false)" id="redeemCodeModeCreate" class="pivx-button-big" style="margin: 0;border-top-left-radius: 0;border-bottom-left-radius: 0;opacity: 0.8;">Create</button>
+                            </div>
+                            <br>
+                            <br>
+                            <div id="redeemCodeUse">
+                              <div class="col-8" id="redeemCodeInputBox">
+                                <div class="input-group" style="border-color: #9121ff;border-style: solid;border-radius: 10px;">
+                                  <input class="btn-group-input mono center-text" type="text" id="redeemCodeInput" placeholder="Enter your 'PIVX Promos' code" autocomplete="nope" />
+                                  <div class="input-group-append">
+                                    <span class="input-group-text ptr" onclick="MPW.openPromoQRScanner()"><i class="fa-solid fa-qrcode fa-2xl"></i></span>
+                                  </div>
+                                </div>
+                              </div>
+                              <center>
+                                <div id="redeemCodeGiftIconBox" style="display: none;">
+                                  <br>
+                                  <br>
+                                  <i id="redeemCodeGiftIcon" onclick="MPW.sweepPromoCode();" class="fa-solid fa-gift fa-2xl" style="color: #813d9c; font-size: 4em;"></i>
+                                </div>
+                                
+                                <p id="redeemCodeETA" style="margin-bottom: 0; display: none;">
+                                  <br><br>
+                                </p>
+                                <progress id="redeemCodeProgress" min="0" max="100" value="50" style="display: none"></progress>
+                              </center>
+                            </div>
+                            <div id="redeemCodeCreate" style="display: none;">
+                              <div class="col-11">
+                                <div class="row">
+                                  <div class="col-6" style="padding-right:3px;">
+                                    <div class="input-group" style="border-color: #9121ff;border-style: solid;border-radius: 10px;">
+                                      <input class="btn-group-input mono center-text" style="border-top-right-radius: 9px; border-bottom-right-radius: 9px;" type="text" id="redeemCodeCreateInput" placeholder="Promo Name (Optional)" autocomplete="nope" />
+                                    </div>
+                                  </div>
+                                  <div class="col-6" style="padding-left:3px;">
+                                    <div class="input-group" style="border-color: #9121ff;border-style: solid;border-radius: 10px;">
+                                      <input class="btn-group-input mono center-text" style="border-top-right-radius: 9px; border-bottom-right-radius: 9px;" type="text" id="redeemCodeCreateAmountInput" placeholder="Promo Amount" autocomplete="nope" />
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              <div class="table-promo d-none" id="promo-table">
+                                <br>
+                                <table class="table table-hover">
+                                  <thead>
+                                    <tr>
+                                      <td class="text-center"><b> Manage </b></td>
+                                      <td class="text-center"><b> Promo Code </b></td>
+                                      <td class="text-center"><b> Amount </b></td>
+                                      <td class="text-center"><b> State </b></td>
+                                    </tr>
+                                  </thead>
+                                  <tbody id="redeemCodeCreatePendingList" style="text-align: center; vertical-align: middle;">
+                                    
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                            <br>
+                          </center>
+                        </div>
+                        <div class="modal-footer" hidden="true" id="redeemCodeModalButtons">
+                          <button type="button" onclick="MPW.promoConfirm()" id="redeemCodeModalConfirmButton" class="pivx-button-big" style="float: right;">Redeem</button>
+                          <button type="button" data-dismiss="modal" aria-label="Close" class="pivx-button-big" style="float: right; opacity: 0.7;">Close</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- // Redeem Code (PIVX Promos) -->
+
                   <!-- WALLET FEATURES -->
                   <div id="guiWallet" style="display: none;">
                     <div class="row p-0">
@@ -458,6 +542,9 @@
                                         </a>
                                         <a class="dropdown-item ptr" id="guiNewAddress" data-toggle="modal" data-target="#qrModal" onclick="MPW.getNewAddress({updateGUI: true, verify: true});">
                                           <i class="fas fa-sync-alt"></i> Refresh address
+                                        </a>
+                                        <a class="dropdown-item ptr" data-toggle="modal" data-target="#redeemCodeModal">
+                                          <i class="fa-solid fa-gift"></i> Redeem or Create Code
                                         </a>
                                       </div>
                                     </div>

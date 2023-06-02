@@ -426,7 +426,7 @@ export async function createMasternode() {
     database.removeMasternode();
 }
 
-async function signTransaction(cTx, masterKey, outputs, undelegate) {
+export async function signTransaction(cTx, masterKey, outputs, undelegate) {
     if (!masterKey.isHardwareWallet) {
         return await cTx.sign(
             masterKey,

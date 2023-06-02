@@ -200,17 +200,30 @@ export class ExplorerNetwork extends Network {
     }
 
     /**
-     * Fetch UTXOs from the current primary explorer
-     * @returns {Promise<void>} Resolves when it has finished fetching UTXOs
+     * @typedef {object} BlockbookUTXO
+     * @property {string} txid - The TX hash of the output
+     * @property {number} vout - The Index Position of the output
+     * @property {string} value - The string-based satoshi value of the output
+     * @property {number} height - The block height the TX was confirmed in
+     * @property {number} confirmations - The depth of the TX in the blockchain
      */
-    async getUTXOs() {
+
+    /**
+     * Fetch UTXOs from the current primary explorer
+     * @param {string} strAddress - Optional address, gets UTXOs without changing MPW's state
+     * @returns {Promise<Array<BlockbookUTXO>>} Resolves when it has finished fetching UTXOs
+     */
+    async getUTXOs(strAddress = '') {
         // Don't fetch UTXOs if we're already scanning for them!
-        if (!this.masterKey) return;
-        if (this.isSyncing) return;
-        this.isSyncing = true;
+        if (!strAddress) {
+            if (!this.masterKey) return;
+            if (this.isSyncing) return;
+            this.isSyncing = true;
+        }
         try {
             let publicKey;
-            if (this.masterKey.isHD) {
+            // Derive our XPub, or fetch a single pubkey
+            if (this.masterKey.isHD && !strAddress) {
                 const derivationPath = getDerivationPath(
                     this.masterKey.isHardwareWallet
                 )
@@ -219,15 +232,20 @@ export class ExplorerNetwork extends Network {
                     .join('/');
                 publicKey = await this.masterKey.getxpub(derivationPath);
             } else {
-                publicKey = await this.masterKey.getAddress();
+                // Use the param address if specified, or the Master Key by default
+                publicKey = strAddress || (await this.masterKey.getAddress());
             }
 
-            getEventEmitter().emit(
-                'utxo',
-                await (
-                    await fetch(`${this.strUrl}/api/v2/utxo/${publicKey}`)
-                ).json()
-            );
+            // Fetch UTXOs for the key
+            const arrUTXOs = await (
+                await fetch(`${this.strUrl}/api/v2/utxo/${publicKey}`)
+            ).json();
+
+            // If using MPW's wallet, then sync the UTXOs in MPW's state
+            if (!strAddress) getEventEmitter().emit('utxo', arrUTXOs);
+
+            // Return the UTXOs for additional utility use
+            return arrUTXOs;
         } catch (e) {
             console.error(e);
             this.error();

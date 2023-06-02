@@ -382,26 +382,46 @@ export function parseWIF(strWIF, skipVerification = false) {
     return verifyWIF(strWIF, true, skipVerification);
 }
 
-// Generate a new private key OR encode an existing private key from raw bytes
+/**
+ * Private key in Bytes and WIF formats
+ * @typedef {Object} PrivateKey
+ * @property {Uint8Array} pkBytes - The unprocessed Private Key bytes.
+ * @property {string} strWIF - The WIF encoded private key string.
+ */
+
+/**
+ * Network encode 32 bytes for a private key
+ * @param {Uint8Array} pkBytes - 32 Bytes
+ * @returns {Uint8Array} - The network-encoded Private Key bytes
+ */
+export function encodePrivkeyBytes(pkBytes) {
+    const pkNetBytes = new Uint8Array(pkBytes.length + 2);
+    pkNetBytes[0] = cChainParams.current.SECRET_KEY; // Private key prefix (1 byte)
+    writeToUint8(pkNetBytes, pkBytes, 1); // Private key bytes             (32 bytes)
+    pkNetBytes[pkNetBytes.length - 1] = 1; // Leading digit                (1 byte)
+    return pkNetBytes;
+}
+
+/**
+ * Generate a new private key OR encode an existing private key from raw bytes
+ * @param {Uint8Array} pkBytesToEncode - Bytes to encode as a coin private key
+ * @returns {PrivateKey} - The private key
+ */
 export function generateOrEncodePrivkey(pkBytesToEncode) {
     // Private Key Generation
     const pkBytes = pkBytesToEncode || getSafeRand();
-    const pkNetBytesLen = pkBytes.length + 2;
-    const pkNetBytes = new Uint8Array(pkNetBytesLen);
 
     // Network Encoding
-    pkNetBytes[0] = cChainParams.current.SECRET_KEY; // Private key prefix (1 byte)
-    writeToUint8(pkNetBytes, pkBytes, 1); // Private key bytes  (32 bytes)
-    pkNetBytes[pkNetBytesLen - 1] = 1; // Leading digit      (1 byte)
+    const pkNetBytes = encodePrivkeyBytes(pkBytes);
 
     // Double SHA-256 hash
     const shaObj = dSHA256(pkNetBytes);
 
     // WIF Checksum
     const checksum = shaObj.slice(0, 4);
-    const keyWithChecksum = new Uint8Array(pkNetBytesLen + checksum.length);
+    const keyWithChecksum = new Uint8Array(34 + checksum.length);
     writeToUint8(keyWithChecksum, pkNetBytes, 0);
-    writeToUint8(keyWithChecksum, checksum, pkNetBytesLen);
+    writeToUint8(keyWithChecksum, checksum, 34);
 
     // Return both the raw bytes and the WIF format
     return { pkBytes, strWIF: bs58.encode(keyWithChecksum) };
